@@ -7,7 +7,7 @@ An agent skill for reviewing test value, choosing test doubles, and removing red
 Run in your project directory:
 
 ```sh
-npx skills add ivan-magda/pragmatic-testing -a claude-code -a codex
+npx skills add https://github.com/ivan-magda/pragmatic-testing-skill --skill pragmatic-testing
 ```
 
 Add `-g` to install across projects. The skills CLI supports symlinks so agents share one copy.
