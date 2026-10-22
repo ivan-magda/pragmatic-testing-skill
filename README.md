@@ -10,8 +10,6 @@ Run in your project directory:
 npx skills add https://github.com/ivan-magda/pragmatic-testing-skill --skill pragmatic-testing
 ```
 
-Add `-g` to install across projects. The skills CLI supports symlinks so agents share one copy.
-
 ## Use
 
 Ask your agent:
