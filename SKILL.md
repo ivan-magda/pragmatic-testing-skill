@@ -13,6 +13,12 @@ Most of these ideas come from Orta Therox's
 perfect. Don't test every `if`. Paint with a wide brush first and keep the fine brush for
 the edges. The examples are Swift, but the rules apply in any language.
 
+These rules cover unit-level tests. Snapshot, UI, and end-to-end tests are out of scope.
+Follow the project's practice for them, and don't delete them in an audit.
+
+Mockable, the layer names, and the file locations below are examples. Use the mock
+library, shared fakes, and layers the project already has.
+
 ## Earn-its-place check
 
 Answer these before you write a test. If you can't answer them, don't write it.
@@ -26,6 +32,10 @@ Answer these before you write a test. If you can't answer them, don't write it.
 3. **Does it survive a refactor that keeps behaviour?** If it breaks when the internals
    change and the observable result stays the same, it pins the implementation. Rewrite
    it against the result. Scheduling controls are the exception. See Doubles.
+
+Ordinary tests need no test-first ritual. Write the test with the change, then break the
+production line once, confirm the test goes red, and restore the line. Bug reproductions
+follow a stricter rule. See Bug reproductions.
 
 ## Expected values come from the product rule
 
@@ -75,9 +85,10 @@ Pick the cheapest double that answers the question the test asks.
 | State across calls, streams held open, ordering | One controllable fake per protocol, kept next to the protocol behind a debug flag or in a test-support target |
 | Behaviour that *is* the implementation: DB constraints, file atomicity, parser output | The real implementation, in an integration test |
 
-- **One fake per protocol.** Extend it before you write another. Write a test-local
-  double only for a control the shared fake lacks, and name that control in a one-line
-  comment.
+- **One fake per protocol.** Don't write a second shared fake for a protocol. When the
+  shared fake lacks a control one test file needs, write a test-local double and name
+  that control in a one-line comment. The third copy rule says when the control moves
+  into the shared fake.
 - **An inert stand-in is no reason for a new double.** If a parameter just needs
   *something*, use a relaxed mock or the shared fake.
 - **A double may control scheduling but not semantics.** Parking a call, counting writes,
@@ -88,8 +99,9 @@ Pick the cheapest double that answers the question the test asks.
   real type does means you want an integration test against the real type.
 - **Keep the doc comment current.** A double's doc comment describes what the tests drive
   it to do.
-- **Third copy rule.** When the same test-local double appears in a third file, promote
-  it and delete the copies.
+- **Third copy rule.** When the same test-local double appears in a third file, move its
+  control into the shared fake and delete the copies. If the protocol has no shared fake,
+  the double becomes that fake.
 
 ### Stub freely, verify only effects
 
@@ -128,10 +140,11 @@ persistence, or money.
    - **Fold** it into a parameterized test as a new row, or into a widened assertion.
    - **Discard** it if it was only a diagnostic.
 
-Ordinary tests need no test-first ritual. Write the test with the change, then break the
-production line once and confirm the test goes red. Bug reproductions are different.
-Stash the fix and run the reproduction against the unfixed code, because re-breaking the
-code afterwards only tests your theory of the bug.
+If you wrote the fix before the reproduction, still run the reproduction against the
+unfixed code. Re-breaking the code by hand only tests your theory of the bug. Stash the
+production files of the fix and leave the test in the tree
+(`git stash push -- <paths>`), or copy the test into a worktree at the commit before the
+fix.
 
 ## Smells
 
@@ -172,9 +185,11 @@ Report first, edit second.
 
 ### Prove the prune
 
-Every batch that deletes, merges, or rewrites tests ends with proof that the remaining
-tests still catch what the old ones caught. The agent that pruned must not grade itself.
-Run the numbers, or hand them to a separate reviewer.
+Every batch whose purpose is to delete, merge, or rewrite tests ends with proof that the
+remaining tests still catch what the old ones caught. Tests you touch while changing the
+code they cover are ordinary work, and the break-the-line step in the earn-its-place
+check covers them. The agent that pruned must not grade itself. Run the numbers, or hand
+them to a separate reviewer.
 
 1. **Coverage first.** Compare per-function coverage before and after the prune. In
    Xcode, run the tests with code coverage enabled. Without the flag the report comes
@@ -189,9 +204,11 @@ Run the numbers, or hand them to a separate reviewer.
    flipped comparison, a dropped filter, an early return, or a negated guard. Start with
    the bug each removed test claimed to catch. Apply one mutant at a time, and confirm
    each restore by file hash.
-3. **Tie the proof to the deletion.** Before the prune, record which tests kill each
-   mutant. At least one killer must be a test this batch removes or rewrites, or the
-   mutant proves nothing about the prune. After the prune, name the new killer.
+3. **Tie the proof to the deletion.** Run each mutant on both sides: in the merge-base
+   worktree against the old tests, and in the pruned tree. On the old side, record which
+   tests kill the mutant. At least one killer must be a test this batch removes or
+   rewrites, or the mutant proves nothing about the prune. On the pruned side, name the
+   new killer.
 4. **Gate.** The remaining tests must kill every mutant that the old tests killed. If a
    mutant now survives, restore or rewrite a test. A mutant that survives on both sides
    is an old gap. Add a test for it only if the test passes the earn-its-place check, and
